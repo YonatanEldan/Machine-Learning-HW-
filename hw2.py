@@ -21,10 +21,12 @@ def calc_gini(data):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
+    # if the data is empty then gini is 0
     if(len(data)==0): return 0
     length = (len(data[0,:]))
     arr = data[:,length-1]
     S = len(arr)
+    #creates a dictionary where labels are keys and number of labels in data are values 
     unique, counts = np.unique(arr, return_counts=True)
     d = dict(zip(unique, counts))
     for key, value in d.items(): 
@@ -47,10 +49,12 @@ def calc_entropy(data):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
+    # if the data is empty then entropy is 0
     if(len(data)==0): return 0
     length = (len(data[0,:]))
     arr = data[:,length-1]
     S = len(arr)
+    #creates a dictionary where labels are keys and number of labels in data are values 
     unique, counts = np.unique(arr, return_counts=True)
     d = dict(zip(unique, counts))
     for key, value in d.items(): 
@@ -78,25 +82,34 @@ class DecisionNode:
     def best_threshold(self , featureIndex , data, impurity):
         labelColumnIndex = (len(data[0,:]))
         featuredata = data[:, [featureIndex, labelColumnIndex-1]]
+        # might be useless
         otherNode = DecisionNode(featureIndex,0)
         firstChild = DecisionNode(featureIndex,0)
         secondChild = DecisionNode(featureIndex,0)
         otherNode.add_child(firstChild)
         otherNode.add_child(secondChild)
+        # till here
         sortedArr = np.sort(data[:,featureIndex])
         possibleThresholds = []
         for i in range(len(sortedArr)-1):
             possibleThresholds.append((sortedArr[i]+sortedArr[i+1])/2)
            
-        bestThreshold = [1 ,-1]
-        gain = 0
-        for key in possibleThresholds:
-            gain = self.calc_information_gain(otherNode, impurity, featureIndex, key, data) 
-            if (gain > bestThreshold[1]):
-                bestThreshold = [key,gain]
-                print (bestThreshold)
+        bestThreshold = possibleThresholds[0]
+        bestThresholdGain = -1
+        for currentThreshold in possibleThresholds:
+            print("the best bestThreshold is:", bestThreshold)
+            print("the best bestThreshold gain is:", bestThresholdGain)
+            currentGain = self.calc_information_gain(otherNode, impurity, featureIndex, currentThreshold, featuredata) 
+            if (currentGain > bestThresholdGain):
+                bestThreshold = currentThreshold
+                bestThresholdGain = currentGain 
+        return(bestThreshold)
+        
 
-            
+    def best_feature(self,data,impurity):
+        length = (len(data[0,:]))
+        arr = data[:,length-1]
+        S = len(arr)    
             
     
     def calc_information_gain(self, root,impurity, featureIndex, threshold, data):
