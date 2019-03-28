@@ -71,57 +71,63 @@ class DecisionNode:
     # functionality as described in the notebook. It is highly recommended that you 
     # first read and understand the entire exercise before diving into this class.
     
-    def __init__(self, feature, value):
+    def __init__(self, feature=0, value=0):
         self.feature = feature # column index of criteria being tested
         self.value = value # value necessary to get a true result
+        self.prediction = None # added a prediction field which will be updated only for nodes that are leaves at the tree
         self.children = []
         
     def add_child(self, node):
         self.children.append(node)
-        
+
+    
+    #the function calculates the optimal threshold for a feature
+       
     def best_threshold(self , featureIndex , data, impurity):
-        labelColumnIndex = (len(data[0,:]))
-        featuredata = data[:, [featureIndex, labelColumnIndex-1]]
-        # might be useless
-        otherNode = DecisionNode(featureIndex,0)
-        firstChild = DecisionNode(featureIndex,0)
-        secondChild = DecisionNode(featureIndex,0)
-        otherNode.add_child(firstChild)
-        otherNode.add_child(secondChild)
-        # till here
-        sortedArr = np.sort(data[:,featureIndex])
+        # sort the array in order to create an array with optional Thresholds
+        sortedArr = np.sort(data[:,0])
         possibleThresholds = []
+        
         for i in range(len(sortedArr)-1):
             possibleThresholds.append((sortedArr[i]+sortedArr[i+1])/2)
            
         bestThreshold = possibleThresholds[0]
         bestThresholdGain = -1
         for currentThreshold in possibleThresholds:
-            print("the best bestThreshold is:", bestThreshold)
-            print("the best bestThreshold gain is:", bestThresholdGain)
-            currentGain = self.calc_information_gain(otherNode, impurity, featureIndex, currentThreshold, featuredata) 
+            currentGain = self.calc_information_gain(impurity, featureIndex, currentThreshold, data) 
+            # the best threshhold will be the one that has the highest informaion gain
             if (currentGain > bestThresholdGain):
                 bestThreshold = currentThreshold
                 bestThresholdGain = currentGain 
-        return(bestThreshold)
+        return (bestThreshold,bestThresholdGain)
         
-
-    def best_feature(self,data,impurity):
-        length = (len(data[0,:]))
-        arr = data[:,length-1]
-        S = len(arr)    
             
-    
-    def calc_information_gain(self, root,impurity, featureIndex, threshold, data):
+    #the function calculates the information gain for a specific split 
+    def calc_information_gain(self, impurity, featureIndex, threshold, data):
         parentGain = impurity(data)
         S = len(data)
-        b = data[data[:,0]<threshold]
-        c = data[data[:,0]>=threshold]
+        b = data[data[:,0]>threshold]
+        c = data[data[:,0]<=threshold]
         childrensGain = ((len(b)/S)*(impurity(b))+(len(c)/S)*(impurity(c)))
         return (parentGain - childrensGain)
-        
+
+    # the function calculates the best feature and threshold for the data  
+    def best_feature(self,data,impurity):
+        # we check for each feature who has the highest information gain - (-1) is since we don't check the labels.
+        labelColumnIndex = (len(data[0,:])-1)
+        bestGain = -1
+        for i in range(len(data[0,:])):
+            #create data specific for the feature
+            featuredata = data[:, [i, labelColumnIndex-1]]   
+            threshold, informationGain =  self.best_threshold(i,featuredata,impurity)  
+            if(informationGain>bestGain):
+                bestGain = informationGain 
+                bestPair = (i,threshold)
             
         
+        self.feature, self.value = bestPair        
+
+
         
 
 
@@ -137,11 +143,34 @@ def build_tree(data, impurity):
 
     Output: the root node of the tree.
     """
-    root = None
+    root = DecisionNode()
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    NodeQueue = [root]
+    DataQueue = [data]
+    while ((len(NodeQueue))>0):
+        curNode = NodeQueue.pop(0)
+        curNodeData = DataQueue.pop(0)
+        if((impurity(curNodeData))!=0):
+            curNode.best_feature(curNodeData, impurity)
+            #for each child - find the data suitable to him and push the node and 
+            #it's data to the NodeQueue and DataQueue respectively
+            firstChild = DecisionNode()
+            firstChildData = curNodeData[curNodeData[:,curNode.feature]>curNode.value]
+            NodeQueue.insert(0,firstChild)
+            DataQueue.insert(0,firstChildData)
+            # same as for the first child
+            secondChild = DecisionNode()
+            secondChildData = curNodeData[curNodeData[:,curNode.feature]<=curNode.value]
+            NodeQueue.insert(0,secondChild)
+            DataQueue.insert(0,secondChildData)
+            #add the children to the current node 
+            curNode.add_child(firstChild)
+            curNode.add_child(secondChild)
+        else:
+            # if the impurity is 0 then the label is equal in each of the labels column - hence this is the prediction
+            curNode.prediction = curNodeData[0][-1]    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -164,7 +193,14 @@ def predict(node, instance):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    while((len(node.children))>0):
+        if(instance[node.feature]>node.value):
+            node = node.children[0]
+        else:
+            node = node.children[1]
+    # the while loop will end with a node that has no kids.
+    # meaning that it is a leaf and we know it's prediction        
+    pred = node.prediction           
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -185,11 +221,18 @@ def calc_accuracy(node, dataset):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    sum = 0.0
+    size = len(dataset)
+    for row in dataset:
+        pred = predict(node,row)
+        if(pred == row[-1]): sum+=1
+
+    accuracy = sum/size    
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-    return accuracy
+    return (accuracy*100)
 
 def print_tree(node):
     '''
