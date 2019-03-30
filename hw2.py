@@ -75,6 +75,7 @@ class DecisionNode:
         self.value = value # value necessary to get a true result
         self.prediction = None # added a prediction field which will be updated only for nodes that are leaves at the tree
         self.children = []
+        self.isLeaf = False
         
     def add_child(self, node):
         self.children.append(node)
@@ -169,7 +170,7 @@ def build_tree(data, impurity, chi_value = 1):
     while ((len(NodeQueue))>0):
         curNode = NodeQueue.pop(0)
         curNodeData = DataQueue.pop(0)
-
+        curNode.prediction = calc_prediction(curNode,curNodeData)
         if((impurity(curNodeData))!=0):
             curNode.best_feature(curNodeData, impurity)
             
@@ -179,18 +180,18 @@ def build_tree(data, impurity, chi_value = 1):
             secondChild = DecisionNode()
             firstChildData, secondChildData = curNode.split_by_threshold(curNodeData)
             if(not make_a_split(curNodeData,firstChildData,secondChildData,chi_value)):
-                curNode.prediction = curNodeData[0][-1]
+                curNode.isLeaf = True 
             else:
-                NodeQueue.insert(0,firstChild)
-                DataQueue.insert(0,firstChildData)
-                NodeQueue.insert(0,secondChild)
-                DataQueue.insert(0,secondChildData)
+                NodeQueue.append(firstChild)
+                DataQueue.append(firstChildData)
+                NodeQueue.append(secondChild)
+                DataQueue.append(secondChildData)
                 #add the children to the current node  
                 curNode.add_child(firstChild)
                 curNode.add_child(secondChild)
         else:
             # if the impurity is 0 then the label is equal in each of the labels column - hence this is the prediction
-            curNode.prediction = curNodeData[0][-1]    
+            curNode.isLeaf = True   
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -226,6 +227,25 @@ def predict(node, instance):
     ###########################################################################
     return pred
 
+
+def calc_prediction(node, data):
+    """
+    calculate the prediction of the node based on the dataset
+
+    Input:
+    - node: a node in the decision tree.
+    - dataset: the dataset on which the prediction is evaluated
+
+    Output: the prediction of the node classication based on the given dataset (%).
+    """
+    unique, counts = np.unique(data, return_counts=True)
+    d = dict(zip(unique, counts))
+    if (d[0] > d[1]): return 0
+    
+    return 1
+
+
+
 def calc_accuracy(node, dataset):
     """
     calculate the accuracy starting from some node of the decision tree using
@@ -253,6 +273,45 @@ def calc_accuracy(node, dataset):
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return (accuracy*100)
+
+
+def post_pruning(root, data):
+ 
+    while (len(root.children)>0):
+        bestAccuracy = -1
+        bestParent = None
+        possibleParents = possible_parents(root)
+        # check the accuracy for each possible parent
+        for currentParent in possibleParents:
+            # trim parent children to check for the accuracy
+            tempChildren = currentParent.children
+            currentParent.children = []
+            accuracy = calc_accuracy(root, data)
+            if accuracy > bestAccuracy:
+                bestParent = currentParent
+                bestAccuracy = accuracy
+            # return the trimmed children to the parent node 
+            currentParent.children = tempChildren
+            print(bestAccuracy)
+
+
+        # trim the leafs of the best possible parent in the tree
+        bestParent.children = []
+        bestParent.isLeaf = True
+
+
+def possible_parents(root):
+    NodeQueue = [root]
+    possibleParents = []
+    while(len(NodeQueue)>0):
+        curNode = NodeQueue.pop(0)
+        if(curNode.children[0].isLeaf & curNode.children[1].isLeaf):
+            possibleParents.append(curNode)   
+        else:
+            if (not curNode.children[0].isLeaf): NodeQueue.append(curNode.children[0])
+            if (not curNode.children[1].isLeaf): NodeQueue.append(curNode.children[1])       
+
+    return possibleParents            
 
 def print_tree(node):
     '''
