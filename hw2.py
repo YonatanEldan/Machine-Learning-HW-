@@ -1,6 +1,5 @@
 import numpy as np
 np.random.seed(42)
-
 chi_table = {0.01  : 6.635,
              0.005 : 7.879,
              0.001 : 10.828,
@@ -127,9 +126,6 @@ class DecisionNode:
         self.feature, self.value = bestPair        
 
 
-
-
-
     def split_by_threshold(self, data):
         a = data[data[:,self.feature]>self.value]
         b = data[data[:,self.feature]<=self.value]
@@ -181,19 +177,17 @@ def build_tree(data, impurity, chi_value = 1):
             #it's data to the NodeQueue and DataQueue respectively
             firstChild = DecisionNode()
             secondChild = DecisionNode()
-            firstChildData,secondChildData = curNode.split_by_threshold(data)
-            
+            firstChildData, secondChildData = curNode.split_by_threshold(curNodeData)
             if(not make_a_split(curNodeData,firstChildData,secondChildData,chi_value)):
                 curNode.prediction = curNodeData[0][-1]
-                continue
-            
-            NodeQueue.insert(0,firstChild)
-            DataQueue.insert(0,firstChildData)
-            NodeQueue.insert(0,secondChild)
-            DataQueue.insert(0,secondChildData)
-            #add the children to the current node  
-            curNode.add_child(firstChild)
-            curNode.add_child(secondChild)
+            else:
+                NodeQueue.insert(0,firstChild)
+                DataQueue.insert(0,firstChildData)
+                NodeQueue.insert(0,secondChild)
+                DataQueue.insert(0,secondChildData)
+                #add the children to the current node  
+                curNode.add_child(firstChild)
+                curNode.add_child(secondChild)
         else:
             # if the impurity is 0 then the label is equal in each of the labels column - hence this is the prediction
             curNode.prediction = curNodeData[0][-1]    
