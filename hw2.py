@@ -133,6 +133,23 @@ class DecisionNode:
         return (a,b)
 
 
+    def calc_prediction(self,data):
+        """
+        calculate the prediction of the node based on the dataset
+
+        Input:
+        - node: a node in the decision tree.
+        - dataset: the dataset on which the prediction is evaluated
+
+        Output: the prediction of the node classication based on the given dataset (%).
+        """
+        unique, counts = np.unique(data, return_counts=True)
+        d = dict(zip(unique, counts))
+        
+        self.prediction =  max(d,key=d.get) 
+
+
+
 def make_a_split(data, data0 , data1,chi_value):
     if chi_value==1 : return True
     Pf = np.array([(data0[:, -1] == 0).sum(), (data1[:, -1] == 0).sum()])
@@ -170,7 +187,7 @@ def build_tree(data, impurity, chi_value = 1):
     while ((len(NodeQueue))>0):
         curNode = NodeQueue.pop(0)
         curNodeData = DataQueue.pop(0)
-        curNode.prediction = calc_prediction(curNode,curNodeData)
+        curNode.calc_prediction(curNodeData)
         if((impurity(curNodeData))!=0):
             curNode.best_feature(curNodeData, impurity)
             
@@ -179,6 +196,8 @@ def build_tree(data, impurity, chi_value = 1):
             firstChild = DecisionNode()
             secondChild = DecisionNode()
             firstChildData, secondChildData = curNode.split_by_threshold(curNodeData)
+            
+            #check for a split based on the chi value 
             if(not make_a_split(curNodeData,firstChildData,secondChildData,chi_value)):
                 curNode.isLeaf = True 
             else:
@@ -226,28 +245,13 @@ def predict(node, instance):
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return pred
-
-
-def calc_prediction(node, data):
-    """
-    calculate the prediction of the node based on the dataset
-
-    Input:
-    - node: a node in the decision tree.
-    - dataset: the dataset on which the prediction is evaluated
-
-    Output: the prediction of the node classication based on the given dataset (%).
-    """
-    unique, counts = np.unique(data, return_counts=True)
-    d = dict(zip(unique, counts))
-    if (d[0] > d[1]): return 0
+  
     
-    return 1
 
 
 
 def calc_accuracy(node, dataset):
-    """
+    """ 
     calculate the accuracy starting from some node of the decision tree using
     the given dataset.
 
@@ -276,7 +280,10 @@ def calc_accuracy(node, dataset):
 
 
 def post_pruning(root, data):
- 
+
+    bestAccuracysArr = [calc_accuracy(root, data)]
+    numberOfNodesArr = []
+    counterOfInternalNodes=0
     while (len(root.children)>0):
         bestAccuracy = -1
         bestParent = None
@@ -292,12 +299,18 @@ def post_pruning(root, data):
                 bestAccuracy = accuracy
             # return the trimmed children to the parent node 
             currentParent.children = tempChildren
-            print(bestAccuracy)
 
 
         # trim the leafs of the best possible parent in the tree
         bestParent.children = []
         bestParent.isLeaf = True
+        bestAccuracysArr.append(bestAccuracy)
+        counterOfInternalNodes+=1
+        numberOfNodesArr.append(counterOfInternalNodes)
+
+    bestAccuracysArr.pop()
+    return(numberOfNodesArr[::-1],bestAccuracysArr)
+
 
 
 def possible_parents(root):
