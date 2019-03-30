@@ -113,12 +113,11 @@ class DecisionNode:
 
     # the function calculates the best feature and threshold for the data  
     def best_feature(self,data,impurity):
-        # we check for each feature who has the highest information gain - (-1) is since we don't check the labels.
-        labelColumnIndex = (len(data[0,:])-1)
         bestGain = -1
-        for i in range(len(data[0,:])):
+        # we check for each feature who has the highest information gain - (-1) is since we don't check the labels.
+        for i in range(len(data[0,:])-1):
             #create data specific for the feature
-            featuredata = data[:, [i, labelColumnIndex-1]]   
+            featuredata = data[:, [i, len(data[0,:])-1]]   
             threshold, informationGain =  self.best_threshold(i,featuredata,impurity)  
             if(informationGain>bestGain):
                 bestGain = informationGain 
@@ -128,10 +127,32 @@ class DecisionNode:
         self.feature, self.value = bestPair        
 
 
+
+
+
+    def split_by_threshold(self, data):
+        a = data[data[:,self.feature]>self.value]
+        b = data[data[:,self.feature]<=self.value]
+        return (a,b)
+
+
+def make_a_split(data, data0 , data1,chi_value):
+    if chi_value==1 : return True
+    Pf = np.array([(data0[:, -1] == 0).sum(), (data1[:, -1] == 0).sum()])
+    Nf = np.array([(data0[:, -1] == 1).sum(), (data1[:, -1] == 1).sum()])
+    Df = Pf + Nf
+    
+
+    unique, counts = np.unique(data, return_counts=True)
+    d = dict(zip(unique, counts))
+    P0 = d[0]/(len(data))
+    P1 = d[1]/(len(data))
+    E0 = P0*Df
+    E1 = P1*Df
         
+    return ((((np.square(Pf - E0) / E0) +  (np.square(Nf - E1) / E1)).sum())>chi_table[chi_value])
 
-
-def build_tree(data, impurity):
+def build_tree(data, impurity, chi_value = 1):
     """
     Build a tree using the given impurity measure and training dataset. 
     You are required to fully grow the tree until all leaves are pure. 
@@ -152,20 +173,25 @@ def build_tree(data, impurity):
     while ((len(NodeQueue))>0):
         curNode = NodeQueue.pop(0)
         curNodeData = DataQueue.pop(0)
+
         if((impurity(curNodeData))!=0):
             curNode.best_feature(curNodeData, impurity)
+            
             #for each child - find the data suitable to him and push the node and 
             #it's data to the NodeQueue and DataQueue respectively
             firstChild = DecisionNode()
-            firstChildData = curNodeData[curNodeData[:,curNode.feature]>curNode.value]
+            secondChild = DecisionNode()
+            firstChildData,secondChildData = curNode.split_by_threshold(data)
+            
+            if(not make_a_split(curNodeData,firstChildData,secondChildData,chi_value)):
+                curNode.prediction = curNodeData[0][-1]
+                continue
+            
             NodeQueue.insert(0,firstChild)
             DataQueue.insert(0,firstChildData)
-            # same as for the first child
-            secondChild = DecisionNode()
-            secondChildData = curNodeData[curNodeData[:,curNode.feature]<=curNode.value]
             NodeQueue.insert(0,secondChild)
             DataQueue.insert(0,secondChildData)
-            #add the children to the current node 
+            #add the children to the current node  
             curNode.add_child(firstChild)
             curNode.add_child(secondChild)
         else:
