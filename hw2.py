@@ -200,6 +200,7 @@ def build_tree(data, impurity, chi_value = 1):
             #check for a split based on the chi value 
             if(not make_a_split(curNodeData,firstChildData,secondChildData,chi_value)):
                 curNode.isLeaf = True 
+                curNode.prediction = curNodeData[0][-1]
             else:
                 NodeQueue.append(firstChild)
                 DataQueue.append(firstChildData)
@@ -211,6 +212,7 @@ def build_tree(data, impurity, chi_value = 1):
         else:
             # if the impurity is 0 then the label is equal in each of the labels column - hence this is the prediction
             curNode.isLeaf = True   
+            curNode.prediction = curNodeData[0][-1]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -282,7 +284,7 @@ def calc_accuracy(node, dataset):
 def post_pruning(root, data):
 
     bestAccuracysArr = [calc_accuracy(root, data)]
-    numberOfNodesArr = []
+    numberOfNodesArr = [0]
     counterOfInternalNodes=0
     while (len(root.children)>0):
         bestAccuracy = -1
@@ -308,7 +310,7 @@ def post_pruning(root, data):
         counterOfInternalNodes+=1
         numberOfNodesArr.append(counterOfInternalNodes)
 
-    bestAccuracysArr.pop()
+
     return(numberOfNodesArr[::-1],bestAccuracysArr)
 
 
