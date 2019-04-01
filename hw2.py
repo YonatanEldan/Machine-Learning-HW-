@@ -147,6 +147,12 @@ class DecisionNode:
         d = dict(zip(unique, counts))
         
         self.prediction =  max(d,key=d.get) 
+        
+    def representaion(self, level=0):
+        ret = "\t"*level+'[X'+ str(level) + '] <= '+ str(self.value)"\n"
+        for child in self.children:
+            ret += child.representaion(level+1)
+        return ret
 
 
 
@@ -310,7 +316,6 @@ def post_pruning(root, data):
         counterOfInternalNodes+=1
         numberOfNodesArr.append(counterOfInternalNodes)
 
-
     return(numberOfNodesArr[::-1],bestAccuracysArr)
 
 
@@ -331,7 +336,7 @@ def possible_parents(root):
 def print_tree(node):
     '''
     prints the tree according to the example in the notebook
-
+    
 	Input:
 	- node: a node in the decision tree
 
@@ -341,7 +346,15 @@ def print_tree(node):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################    
-    pass
+    print(node.representaion())
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
+"""
+def representaion(node, level=0):
+        ret = "\t"*level+('X',level)+"\n"
+        for child in node.children:
+            ret += child.representaion(level+1)
+            
+        return ret
+"""
