@@ -76,6 +76,7 @@ class DecisionNode:
         self.prediction = None # added a prediction field which will be updated only for nodes that are leaves at the tree
         self.children = []
         self.isLeaf = False
+        self.dict = None
         
     def add_child(self, node):
         self.children.append(node)
@@ -149,9 +150,12 @@ class DecisionNode:
         self.prediction =  max(d,key=d.get) 
         
     def representaion(self, level=0):
-        ret = "\t"*level+'[X'+ str(self.feature) + ' <= '+ str(self.value) +'],' + "\n"
-        for child in self.children:
-            ret += child.representaion(level+1)
+        if (self.isLeaf):
+             ret = "\t"*level+ 'leaf : [' + str(self.dict) + ']' + "\n"
+        else:    
+            ret = "\t"*level+'[X'+ str(self.feature) + ' <= '+ str(self.value) +'],' + "\n"
+            for child in self.children:
+                ret += child.representaion(level+1)
         return ret
 
 
@@ -194,6 +198,9 @@ def build_tree(data, impurity, chi_value = 1):
         curNode = NodeQueue.pop(0)
         curNodeData = DataQueue.pop(0)
         curNode.calc_prediction(curNodeData)
+        #creates a dictionary where labels are keys and number of labels in data are values 
+        unique, counts = np.unique(curNodeData[:,-1], return_counts=True)
+        curNode.dict = dict(zip(unique, counts))
         if((impurity(curNodeData))!=0):
             curNode.best_feature(curNodeData, impurity)
             
@@ -287,11 +294,11 @@ def calc_accuracy(node, dataset):
     return (accuracy*100)
 
 
-def post_pruning(root, data):
+def post_pruning(root, trainData, testData):
 
-    bestAccuracysArr = [calc_accuracy(root, data)]
-    numberOfNodesArr = [0]
-    counterOfInternalNodes=0
+    trainAccuracysArr = [calc_accuracy(root, trainData)]
+    testAccuracysArr = [calc_accuracy(root, testData)]
+    numberOfNodesArr = [count_internal_nodes(root)]
     while (len(root.children)>0):
         bestAccuracy = -1
         bestParent = None
@@ -301,7 +308,7 @@ def post_pruning(root, data):
             # trim parent children to check for the accuracy
             tempChildren = currentParent.children
             currentParent.children = []
-            accuracy = calc_accuracy(root, data)
+            accuracy = calc_accuracy(root, trainData)
             if accuracy > bestAccuracy:
                 bestParent = currentParent
                 bestAccuracy = accuracy
@@ -312,11 +319,11 @@ def post_pruning(root, data):
         # trim the leafs of the best possible parent in the tree
         bestParent.children = []
         bestParent.isLeaf = True
-        bestAccuracysArr.append(bestAccuracy)
-        counterOfInternalNodes+=1
-        numberOfNodesArr.append(counterOfInternalNodes)
+        trainAccuracysArr.append(bestAccuracy)
+        testAccuracysArr.append(calc_accuracy(root, testData))
+        numberOfNodesArr.append(count_internal_nodes(root))
 
-    return(numberOfNodesArr[::-1],bestAccuracysArr)
+    return(numberOfNodesArr,trainAccuracysArr,testAccuracysArr)
 
 
 
@@ -325,13 +332,17 @@ def possible_parents(root):
     possibleParents = []
     while(len(NodeQueue)>0):
         curNode = NodeQueue.pop(0)
-        if(curNode.children[0].isLeaf & curNode.children[1].isLeaf):
-            possibleParents.append(curNode)   
-        else:
-            if (not curNode.children[0].isLeaf): NodeQueue.append(curNode.children[0])
-            if (not curNode.children[1].isLeaf): NodeQueue.append(curNode.children[1])       
+        if(curNode.children[0].isLeaf | curNode.children[1].isLeaf): possibleParents.append(curNode)   
+        if (not curNode.children[0].isLeaf): NodeQueue.append(curNode.children[0])
+        if (not curNode.children[1].isLeaf): NodeQueue.append(curNode.children[1])       
 
     return possibleParents            
+
+def count_internal_nodes(node):
+    if node.isLeaf:
+        return 0
+    return 1 + count_internal_nodes(node.children[0]) + count_internal_nodes(node.children[1])
+
 
 def print_tree(node):
     '''
@@ -350,11 +361,3 @@ def print_tree(node):
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-"""
-def representaion(node, level=0):
-        ret = "\t"*level+('X',level)+"\n"
-        for child in node.children:
-            ret += child.representaion(level+1)
-            
-        return ret
-"""
