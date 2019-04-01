@@ -149,7 +149,7 @@ class DecisionNode:
         self.prediction =  max(d,key=d.get) 
         
     def representaion(self, level=0):
-        ret = "\t"*level+'[X'+ str(level) + '] <= '+ str(self.value)"\n"
+        ret = "\t"*level+'[X'+ str(self.feature) + ' <= '+ str(self.value) +'],' + "\n"
         for child in self.children:
             ret += child.representaion(level+1)
         return ret
