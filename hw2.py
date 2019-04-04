@@ -151,9 +151,9 @@ class DecisionNode:
         
     def representaion(self, level=0):
         if (self.isLeaf):
-             ret = "\t"*level+ 'leaf : [' + str(self.dict) + ']' + "\n"
+             ret = "  "*level+ 'leaf: [' + str(self.dict) + ']' + "\n"
         else:    
-            ret = "\t"*level+'[X'+ str(self.feature) + ' <= '+ str(self.value) +'],' + "\n"
+            ret = "  "*level+'[X'+ str(self.feature) + ' <= '+ str(self.value) +'],' + "\n"
             for child in self.children:
                 ret += child.representaion(level+1)
         return ret
@@ -213,7 +213,7 @@ def build_tree(data, impurity, chi_value = 1):
             #check for a split based on the chi value 
             if(not make_a_split(curNodeData,firstChildData,secondChildData,chi_value)):
                 curNode.isLeaf = True 
-                curNode.prediction = curNodeData[0][-1]
+                curNode.calc_prediction(curNodeData)
             else:
                 NodeQueue.append(firstChild)
                 DataQueue.append(firstChildData)
@@ -319,7 +319,7 @@ def post_pruning(root, trainData, testData):
         # trim the leafs of the best possible parent in the tree
         bestParent.children = []
         bestParent.isLeaf = True
-        trainAccuracysArr.append(bestAccuracy)
+        trainAccuracysArr.append(calc_accuracy(root, trainData))
         testAccuracysArr.append(calc_accuracy(root, testData))
         numberOfNodesArr.append(count_internal_nodes(root))
 
@@ -332,7 +332,7 @@ def possible_parents(root):
     possibleParents = []
     while(len(NodeQueue)>0):
         curNode = NodeQueue.pop(0)
-        if(curNode.children[0].isLeaf | curNode.children[1].isLeaf): possibleParents.append(curNode)   
+        if(curNode.children[0].isLeaf or curNode.children[1].isLeaf): possibleParents.append(curNode)   
         if (not curNode.children[0].isLeaf): NodeQueue.append(curNode.children[0])
         if (not curNode.children[1].isLeaf): NodeQueue.append(curNode.children[1])       
 
